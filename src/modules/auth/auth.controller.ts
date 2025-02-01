@@ -1,19 +1,22 @@
 import {
-  Controller,
-  Post,
-  UseGuards,
-  Request,
-  UnauthorizedException,
   Body,
   ConflictException,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Request,
+  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
+import { UserProfileDto } from '../user/entities/user-profile.dto';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
-import { SignupDto } from './dto/signup.dto';
-import { Public } from 'src/common/decorators/public.decorator';
 import { RefreshTokenDto } from './dto/refreshToken.dto';
+import { SignupDto } from './dto/signup.dto';
+import { GoogleAuthGuard } from './guards/google.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LocalAuthGuard } from './guards/local-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -68,5 +71,20 @@ export class AuthController {
   @Post('validate-token')
   validateToken(@Request() req: { user: { email: string } }) {
     return { valid: true, user: req.user };
+  }
+
+  @UseGuards(GoogleAuthGuard)
+  @Get('google')
+  googleAuth(@Req() req: { user: UserProfileDto }) {
+    return req.user;
+  }
+
+  @UseGuards(GoogleAuthGuard)
+  @Get('google/callback')
+  googleAuthRedirect(@Req() req) {
+    return {
+      message: 'Google Authentication successful',
+      user: req.user,
+    };
   }
 }

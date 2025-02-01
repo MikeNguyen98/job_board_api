@@ -21,18 +21,12 @@ export class AuthService {
     user: User,
   ): Promise<{ access_token: string; refresh_token: string }> {
     const payload = { email: user.email, sub: user.id };
-    const token = this.jwtService.sign(payload);
 
-    // Generate refresh token
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: '7d', // 7 days expiration
-    });
-
+    const { accessToken, refreshToken } = await this.generateTokens(payload);
     // Cache the session in Redis
-    await this.cacheToken(user.id.toString(), token);
+    await this.cacheToken(user.id.toString(), accessToken);
 
-    return { access_token: token, refresh_token: refreshToken };
+    return { access_token: accessToken, refresh_token: refreshToken };
   }
 
   async logout(userId: string) {
@@ -93,12 +87,8 @@ export class AuthService {
 
     // Generate new tokens
     const newPayload = { email: payload.email, sub: payload.sub };
-    const accessToken = this.jwtService.sign(newPayload);
-
-    const newRefreshToken = this.jwtService.sign(newPayload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: '7d',
-    });
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.generateTokens(newPayload);
 
     // Update refresh token in Redis
     await redisClient.set(
@@ -108,16 +98,16 @@ export class AuthService {
       7 * 24 * 60 * 60,
     );
 
-    return { access_token: accessToken, refresh_token: newRefreshToken };
+    return { access_token: accessToken, refresh_token: refreshToken };
   }
 
-  private async generateTokens(user: User) {
+  private async generateTokens(user) {
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync({ sub: user.id }, { expiresIn: '15m' }),
-      this.jwtService.signAsync({ sub: user.id }, { expiresIn: '7d' }),
+      this.jwtService.signAsync(user),
+      this.jwtService.signAsync(user, { expiresIn: '7d' }),
     ]);
 
-    await this.userService.update(user.id, {
+    await this.userService.update(user.sub, {
       refreshToken: await hash(refreshToken, 10),
     });
 

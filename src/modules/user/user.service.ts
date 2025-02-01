@@ -34,8 +34,15 @@ export class UserService {
   }
 
   async update(id: string, userData: Partial<User>): Promise<User | null> {
-    await this.userRepository.update(id, userData);
+    if (!id) {
+      throw new Error('User ID is required for updating');
+    }
 
-    return this.userRepository.findOneBy({ id });
+    const user = await this.userRepository.preload({ id, ...userData });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return this.userRepository.save(user);
   }
 }

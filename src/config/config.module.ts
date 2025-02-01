@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig } from './database.config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -20,6 +21,12 @@ import { MongooseModule } from '@nestjs/mongoose';
         retryDelay: 3000, // Delay between reconnection attempts
       },
     ),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // Time window (60 seconds)
+        limit: 10, // Max 20 requests per minute per IP
+      },
+    ]),
   ],
 })
 export class ConfigAppModule {}
